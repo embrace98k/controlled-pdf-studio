@@ -1,0 +1,24 @@
+Copyright © 2026 深圳市无穹创新科技有限公司
+
+All Rights Reserved.
+
+This software and associated documentation files (the "Software") are the
+proprietary and confidential property of 深圳市无穹创新科技有限公司
+(Shenzhen Wuqiong Innovation Technology Co., Ltd.).
+
+The Software is provided for internal use only. Without express written
+permission from the copyright holder, no part of the Software may be:
+
+  - Reproduced, distributed, transmitted, displayed, published or broadcast
+    in any form or by any means;
+  - Modified, adapted, translated or used to create derivative works;
+  - Reverse engineered, decompiled or disassembled;
+  - Sold, rented, leased, sublicensed or otherwise transferred to any
+    third party.
+
+Third-party libraries used by this Software (Electron, React, pdf-lib,
+pdf.js, etc.) are governed by their respective licenses, which can be
+found in node_modules or LICENSES.chromium.html.
+
+For licensing inquiries, please contact:
+  深圳市无穹创新科技有限公司

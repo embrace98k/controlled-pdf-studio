@@ -1,0 +1,51 @@
+# 依赖
+node_modules
+
+# 构建产物（前端）
+dist
+dist-ssr
+*.local
+
+# 构建产物（Electron 主进程 / 安装包）
+dist-electron
+release
+out
+*.exe
+
+# 日志
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# 开发临时文件
+_dev.log
+_build.log
+_make-icon.cjs
+_icon-*.png
+_preview*.png
+_mockup.js
+
+# 编辑器/IDE
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# 环境变量
+.env
+.env.local
+.env.*.local
+
+# 测试输出
+_stamped/
+*_stamped/
+*_stamped.pdf
