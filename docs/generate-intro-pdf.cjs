@@ -1,6 +1,5 @@
 /**
- * 用 pdf-lib + 思源黑体生成项目介绍 PDF
- * 节省第三方依赖，复用项目自身能力
+ * 项目介绍 PDF 生成器（精致版）
  * 用法：node docs/generate-intro-pdf.cjs
  */
 const fs = require('node:fs');
@@ -8,312 +7,776 @@ const path = require('node:path');
 const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
 const fontkit = require('@pdf-lib/fontkit');
 
-const A4_W = 595.28;
-const A4_H = 841.89;
-const MARGIN_X = 60;
-const MARGIN_TOP = 60;
-const MARGIN_BOTTOM = 50;
-const CONTENT_W = A4_W - MARGIN_X * 2;
+// ============ 页面规格 ============
+const W = 595.28;
+const H = 841.89;
+const PADDING = 50;
+const CONTENT_W = W - PADDING * 2;
 
-// 主题色
-const C_PRIMARY = rgb(0.482, 0.227, 0.929);   // 紫
-const C_ACCENT = rgb(0.925, 0.282, 0.6);       // 粉
-const C_RED = rgb(0.725, 0.114, 0.114);
-const C_TEXT = rgb(0.13, 0.13, 0.13);
-const C_GREY = rgb(0.4, 0.4, 0.4);
-const C_LIGHT_GREY = rgb(0.92, 0.92, 0.92);
-const C_BG_TIP = rgb(0.949, 0.973, 1);         // 浅蓝底
-const C_BG_WARN = rgb(0.996, 0.953, 0.78);     // 浅黄底
+// ============ 设计系统 ============
+const COLOR = {
+  primary: rgb(0.482, 0.227, 0.929),    // 主紫 #7C3AED
+  primaryLight: rgb(0.925, 0.91, 0.992), // 浅紫 #ECE8FD
+  accent: rgb(0.925, 0.282, 0.6),        // 强调粉 #EC4899
+  accentLight: rgb(0.992, 0.91, 0.953),  // 浅粉
+  ink: rgb(0.106, 0.122, 0.169),         // 深墨 #1B1F2B
+  text: rgb(0.2, 0.22, 0.27),            // 正文 #333845
+  muted: rgb(0.45, 0.48, 0.55),          // 弱化 #737B8C
+  hint: rgb(0.6, 0.63, 0.68),            // 提示 #989FAC
+  divider: rgb(0.9, 0.91, 0.93),         // 分隔线
+  cardBg: rgb(0.972, 0.976, 0.984),      // 卡片背景 #F8F9FB
+  cardBorder: rgb(0.925, 0.933, 0.945),  // 卡片边框
+  white: rgb(1, 1, 1),
+  black: rgb(0, 0, 0),
+  // 状态色
+  green: rgb(0.094, 0.486, 0.357),       // #187C5B
+  greenLight: rgb(0.88, 0.965, 0.918),   // #E0F6EA
+  blue: rgb(0, 0.471, 0.831),
+  blueLight: rgb(0.918, 0.957, 1),
+  amber: rgb(0.706, 0.43, 0.04),
+  amberLight: rgb(1, 0.965, 0.886),
+  red: rgb(0.725, 0.114, 0.114),
+};
 
+const FONT_SIZE = {
+  cover: 36,
+  display: 26,
+  h1: 19,
+  h2: 14,
+  h3: 11,
+  body: 10,
+  small: 9,
+  tiny: 8,
+};
+
+// ============ 主流程 ============
 (async () => {
-  const fontBytes = fs.readFileSync(path.join(__dirname, '..', 'public', 'simhei.ttf'));
-
   const pdfDoc = await PDFDocument.create();
   pdfDoc.registerFontkit(fontkit);
-  const font = await pdfDoc.embedFont(fontBytes, { subset: true });
-  const fontEN = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const fontBytes = fs.readFileSync(path.join(__dirname, '..', 'public', 'simhei.ttf'));
+  const FONT = await pdfDoc.embedFont(fontBytes, { subset: true });
+  const FONT_EN = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const FONT_EN_BOLD = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-  let page = pdfDoc.addPage([A4_W, A4_H]);
-  let y = A4_H - MARGIN_TOP;
-  let pageNum = 1;
+  // 状态
+  const ctx = { pdfDoc, font: FONT, fontEN: FONT_EN, fontENBold: FONT_EN_BOLD };
 
-  // ---------- 工具函数 ----------
-  function newPageIfNeeded(needed) {
-    if (y - needed < MARGIN_BOTTOM) {
-      drawPageFooter(page, pageNum);
-      page = pdfDoc.addPage([A4_W, A4_H]);
-      pageNum++;
-      y = A4_H - MARGIN_TOP;
-    }
+  // 渲染各页
+  drawCoverPage(ctx);
+  drawTocPage(ctx);
+  drawSection1(ctx);
+  drawSection2(ctx);
+  drawSection3(ctx);
+  drawSection4_5(ctx);
+  drawSection6(ctx);
+
+  // 给所有页面加页脚
+  const pages = pdfDoc.getPages();
+  for (let i = 0; i < pages.length; i++) {
+    if (i === 0) continue; // 封面不加
+    drawFooter(pages[i], FONT, FONT_EN, i + 1, pages.length);
   }
 
-  function drawPageFooter(p, n) {
-    p.drawText(`受控PDF盖章工具 · 使用说明`, {
-      x: MARGIN_X, y: 24, size: 8, font, color: C_GREY,
-    });
-    p.drawText(`第 ${n} 页`, {
-      x: A4_W - MARGIN_X - 40, y: 24, size: 8, font, color: C_GREY,
-    });
-  }
-
-  // 段落标题
-  function h1(text) {
-    newPageIfNeeded(40);
-    page.drawRectangle({
-      x: MARGIN_X - 8, y: y - 22,
-      width: 4, height: 22,
-      color: C_PRIMARY,
-    });
-    page.drawText(text, {
-      x: MARGIN_X + 2, y: y - 18,
-      size: 16, font, color: C_PRIMARY,
-    });
-    y -= 32;
-  }
-
-  function h2(text) {
-    newPageIfNeeded(28);
-    page.drawText('● ' + text, {
-      x: MARGIN_X, y: y - 12,
-      size: 12, font, color: C_TEXT,
-    });
-    y -= 22;
-  }
-
-  // 正文段
-  function p(text, opts = {}) {
-    const size = opts.size || 10;
-    const color = opts.color || C_TEXT;
-    const indent = opts.indent || 0;
-    const x0 = MARGIN_X + indent;
-    const wrapWidth = CONTENT_W - indent;
-    const lines = wrapText(text, font, size, wrapWidth);
-    for (const line of lines) {
-      newPageIfNeeded(size + 4);
-      page.drawText(line, { x: x0, y: y - size, size, font, color });
-      y -= size + 4;
-    }
-    y -= 4;
-  }
-
-  // 字符级换行
-  function wrapText(text, fnt, size, maxW) {
-    const out = [];
-    for (const raw of text.split('\n')) {
-      let line = '';
-      for (const ch of raw) {
-        const test = line + ch;
-        if (fnt.widthOfTextAtSize(test, size) > maxW) {
-          out.push(line);
-          line = ch;
-        } else {
-          line = test;
-        }
-      }
-      out.push(line);
-    }
-    return out;
-  }
-
-  // 列表项
-  function li(text) {
-    p('• ' + text, { indent: 12 });
-  }
-
-  // 提示框
-  function tipBox(title, text, bg = C_BG_TIP, border = C_PRIMARY) {
-    const lines = wrapText(text, font, 9, CONTENT_W - 20);
-    const h = 18 + lines.length * 13 + 8;
-    newPageIfNeeded(h);
-    page.drawRectangle({
-      x: MARGIN_X, y: y - h, width: CONTENT_W, height: h,
-      color: bg,
-      borderColor: border, borderWidth: 0.5,
-    });
-    page.drawText(title, { x: MARGIN_X + 10, y: y - 14, size: 10, font, color: border });
-    let ty = y - 28;
-    for (const ln of lines) {
-      page.drawText(ln, { x: MARGIN_X + 10, y: ty, size: 9, font, color: C_TEXT });
-      ty -= 13;
-    }
-    y -= h + 8;
-  }
-
-  // 间隔
-  function vspace(h) { y -= h; }
-
-  // ============= 封面 =============
-  // 顶部紫色色块
-  page.drawRectangle({ x: 0, y: A4_H - 220, width: A4_W, height: 220, color: C_PRIMARY });
-  page.drawRectangle({ x: 0, y: A4_H - 230, width: A4_W, height: 10, color: C_ACCENT });
-
-  page.drawText('受控PDF盖章工具', {
-    x: MARGIN_X, y: A4_H - 110, size: 32, font, color: rgb(1, 1, 1),
-  });
-  page.drawText('Controlled PDF Studio', {
-    x: MARGIN_X, y: A4_H - 140, size: 14, font: fontEN, color: rgb(0.92, 0.92, 1),
-  });
-  page.drawText('给机械零件受控库 PDF 一键加盖电子受控印章', {
-    x: MARGIN_X, y: A4_H - 175, size: 11, font, color: rgb(1, 1, 1),
-  });
-  page.drawText('v1.0.5  ·  桌面版（Windows）', {
-    x: MARGIN_X, y: A4_H - 200, size: 10, font, color: rgb(0.95, 0.92, 1),
-  });
-
-  // 封面中央：核心特性卡片
-  y = A4_H - 280;
-  const features = [
-    ['📄', '单文件精调', '所见即所得，可拖拽印章 / 实时预览 / 智能透明度'],
-    ['📁', '批量套用模板', '选目录批量处理，跳过已加章，多图幅自适应右上角'],
-    ['⭐', '模板系统',     '保存常用印章样式 · JSON 导入导出 · 团队共享'],
-    ['🔍', '试运行',       '不写文件先预检测，损坏 PDF 提前暴露，避免覆盖'],
-    ['🎯', '智能透明度',   '检测目标区域内容密度，覆盖文字自动半透明'],
-    ['🖱', '右键集成',     '资源管理器右键 PDF → 用本工具打开'],
-  ];
-  for (let i = 0; i < features.length; i++) {
-    const it = features[i];
-    const row = Math.floor(i / 2);
-    const col = i % 2;
-    const cx = MARGIN_X + col * (CONTENT_W / 2 + 5);
-    const cy = y - row * 95;
-    page.drawRectangle({
-      x: cx, y: cy - 80,
-      width: CONTENT_W / 2 - 5, height: 80,
-      color: rgb(0.98, 0.98, 1),
-      borderColor: C_LIGHT_GREY, borderWidth: 0.5,
-    });
-    page.drawText(it[0], { x: cx + 12, y: cy - 30, size: 22, font });
-    page.drawText(it[1], { x: cx + 45, y: cy - 25, size: 12, font, color: C_PRIMARY });
-    const descLines = wrapText(it[2], font, 9, CONTENT_W / 2 - 60);
-    let dy = cy - 45;
-    for (const ln of descLines) {
-      page.drawText(ln, { x: cx + 45, y: dy, size: 9, font, color: C_GREY });
-      dy -= 12;
-    }
-  }
-
-  // 封面底部：公司信息
-  page.drawRectangle({ x: 0, y: 0, width: A4_W, height: 50, color: rgb(0.13, 0.13, 0.13) });
-  page.drawText('深圳市无穹创新科技有限公司', {
-    x: MARGIN_X, y: 26, size: 10, font, color: rgb(1, 1, 1),
-  });
-  page.drawText('© 2026  All Rights Reserved', {
-    x: MARGIN_X, y: 12, size: 8, font: fontEN, color: rgb(0.8, 0.8, 0.8),
-  });
-
-  // ============= 内容页 =============
-  page = pdfDoc.addPage([A4_W, A4_H]);
-  pageNum++;
-  y = A4_H - MARGIN_TOP;
-
-  h1('一、项目背景');
-  p('公司机械零件受控库存有 671 份 PDF 图纸（CAD 加工件、塑胶件、PCBA、外购模组等），传统人工区分"受控/非受控"靠目录命名、靠口头约定，容易混淆。本工具的目标是给受控库每一份 PDF 自动加盖统一格式的电子受控印章，让任何人看到 PDF 第一眼就能识别这是"公司受控库的官方件"。');
-  p('印章包含：编号 / 版本 / 受控日期 / 操作人。所有信息从文件名自动解析，支持 M.X.X.XXXX.YY 全部前缀格式（含 PL 胚料 / LS 临时 等版本前缀）。');
-
-  h1('二、核心功能');
-
-  h2('1. 单文件模式');
-  li('打开 PDF → 自动适应窗口（横版按宽度，竖版按高度）');
-  li('印章默认放在视觉右上角，可拖动 / 拉伸 / 改字号 / 改颜色');
-  li('实时预览：所见即所得');
-  li('Ctrl + 滚轮缩放，可双向滚动查看大图');
-  li('印章信息不完整时按钮锁定，避免误导出');
-
-  h2('2. 批量模式');
-  li('选目录（递归）或多选文件');
-  li('自动跳过已加章的 PDF');
-  li('每张 PDF 按各自图幅自适应印章位置（A4 竖、A4 横、A3、A0 全支持）');
-  li('支持仅首页或全部页');
-  li('试运行：不写文件，先看会处理哪些 + 是否有损坏 PDF');
-  li('处理后自动生成 _stamp-log.json 日志');
-
-  h2('3. 模板系统');
-  li('单文件模式调好印章后 → 保存为模板');
-  li('批量模式选模板套用样式（颜色、字号、宽高、内容文字）');
-  li('支持 JSON 导出/导入，便于多台机器共享');
-
-  h2('4. 智能透明度');
-  li('盖章前先渲染目标区域，检测非白像素占比');
-  li('盖在空白处 → 实色 0.95（像真盖章）');
-  li('覆盖文字/线条 → 半透明 0.6（不遮挡内容）');
-
-  h2('5. 右键菜单集成');
-  li('设置页一键安装，写入 HKEY_CURRENT_USER（不需要管理员）');
-  li('资源管理器右键 PDF → "用受控PDF工具打开"');
-  li('Windows 11 用户：在"显示更多选项"下面');
-
-  // 第3页
-  h1('三、使用说明');
-
-  h2('1. 安装');
-  p('两个版本可选，发给同事时按需求选一个即可：');
-  li('便携版（受控PDF盖章工具-v1.0.5-便携版.exe）：单文件，双击运行，免安装。适合临时用、U 盘携带。');
-  li('安装版（受控PDF盖章工具-v1.0.5-安装版.exe）：走标准安装流程，桌面快捷方式 + 开始菜单 + 卸载条目 + 右键菜单。推荐日常使用。');
-
-  tipBox('💡 推荐使用安装版',
-    'Windows 可能弹"不受信任的发布者"提示（因为没有代码签名证书），点"更多信息 → 仍要运行"即可。这不影响安全性——所有源码都在公司 Git 仓库内可审计。');
-
-  h2('2. 单文件流程');
-  li('① 点"📂 打开 PDF" 或拖拽到窗口');
-  li('② 右侧"印章信息"必填四项：零件号 / 版本 / 受控日期 / 操作人（操作人会自动记住）');
-  li('③ 印章预览中可拖动/拉伸/调字号');
-  li('④ 点"💾 应用并导出" → 输出到源 PDF 同目录的 _stamped/ 子文件夹');
-  li('⑤ 完成后点绿色"📂 打开输出位置"直接定位');
-
-  h2('3. 批量流程');
-  li('① 切到"📁 批量" 标签');
-  li('② "选择目录" 或 "选择文件（多选）" 添加 PDF');
-  li('③ 选择印章模板（可选）+ 填写操作人 / 受控日期');
-  li('④ 设置输出位置（会自动记住上次的）');
-  li('⑤ 选页面范围（全部页 / 仅首页）');
-  li('⑥ 推荐先点 "🔍 试运行" 看会处理哪些');
-  li('⑦ 试运行没问题后，点 "▶ 开始处理"');
-
-  // 第4页
-  h1('四、印章设计说明');
-
-  p('印章默认包含四行信息：');
-  li('标题：★ 受 控 ★ （可自定义）');
-  li('编号：M.M.1.0028.04（从文件名自动解析）');
-  li('版本：Rev.04');
-  li('受控日期：2026-05-17（默认为工具运行日期）');
-  li('操作人：（必填，会自动记住）');
-
-  h2('编号格式说明');
-  li('M.M.1.XXXX.YY  → 机加件');
-  li('M.A.1.XXXX.YY  → 机械总成');
-  li('M.E.E.XXXX.YY  → 电子板卡');
-  li('M.E.H.XXXX.YY  → 线材');
-  li('M.E.0.XXXX     → 外购模组');
-  li('M.M.1.XXXX.PL03 → 胚料件（素材，未做后处理）');
-  li('M.M.1.XXXX.LS01 → 临时物料');
-
-  h1('五、常见问题');
-
-  h2('Q: 已加章的 PDF 重新打开有警告？');
-  p('A: 系统通过 PDF 元数据识别"是否曾被本工具加章"。重新加章会生成新的副本（原文件不变）。');
-
-  h2('Q: 批量模式中某些 PDF 处理失败？');
-  p('A: 通常是 PDF 内部结构非标准（如 Word/旧版工具导出）。建议先用 Adobe Acrobat 打开另存为标准 PDF 再处理。');
-
-  h2('Q: 输出 PDF 能不能编辑/复制？');
-  p('A: 矢量印章写入 PDF 内容流深层，使用 Acrobat 编辑工具无法直接选中删除。但本工具不做强加密保护——内部使用场景下足够避免误操作。');
-
-  h2('Q: 多台机器怎么用同一套印章模板？');
-  p('A: 模板页点"📤 导出 JSON"，把生成的 JSON 给同事，对方在自己工具里"📥 导入 JSON"即可。');
-
-  h1('六、技术栈 & 致谢');
-  p('Electron 42 + React 19 + TypeScript + Vite + pdf-lib + pdf.js');
-  p('字体：思源黑体（开源）/ Windows 系统自带 SimHei');
-  p('PDF 渲染：Mozilla pdf.js  ·  PDF 写入：pdf-lib');
-
-  drawPageFooter(page, pageNum);
-
-  // ---------- 保存 ----------
   const outPath = path.join(__dirname, '受控PDF盖章工具-使用说明-v1.0.5.pdf');
   const bytes = await pdfDoc.save({ useObjectStreams: true });
   fs.writeFileSync(outPath, bytes);
-  console.log('✓ 生成:', outPath);
+  console.log('✓', outPath);
   console.log('  大小:', (bytes.length / 1024).toFixed(1), 'KB');
-  console.log('  页数:', pdfDoc.getPageCount());
+  console.log('  页数:', pages.length);
 })();
+
+// ============ 通用绘图工具 ============
+function wrapText(text, font, size, maxW) {
+  const out = [];
+  for (const raw of text.split('\n')) {
+    let line = '';
+    for (const ch of raw) {
+      const test = line + ch;
+      if (font.widthOfTextAtSize(test, size) > maxW) {
+        out.push(line);
+        line = ch;
+      } else {
+        line = test;
+      }
+    }
+    out.push(line);
+  }
+  return out;
+}
+
+function drawFooter(page, font, fontEN, pageNum, total) {
+  // 顶部细色块
+  page.drawRectangle({
+    x: PADDING, y: H - 28, width: 30, height: 3,
+    color: COLOR.primary,
+  });
+  page.drawText('受控PDF盖章工具', {
+    x: PADDING + 38, y: H - 25, size: 8, font, color: COLOR.muted,
+  });
+  page.drawText('v1.0.5  ·  使用说明', {
+    x: PADDING + 38 + font.widthOfTextAtSize('受控PDF盖章工具', 8) + 8,
+    y: H - 25, size: 8, font, color: COLOR.hint,
+  });
+  // 底部页码
+  page.drawText(String(pageNum), {
+    x: W - PADDING - 20, y: 20, size: 9, font: fontEN, color: COLOR.muted,
+  });
+  page.drawText(`/ ${total}`, {
+    x: W - PADDING - 5, y: 20, size: 8, font: fontEN, color: COLOR.hint,
+  });
+  // 底部公司
+  page.drawText('© 2026 深圳市无穹创新科技有限公司', {
+    x: PADDING, y: 20, size: 8, font, color: COLOR.hint,
+  });
+}
+
+// ==================== 封面页 ====================
+function drawCoverPage({ pdfDoc, font, fontEN, fontENBold }) {
+  const page = pdfDoc.addPage([W, H]);
+
+  // 渐变背景（用多个矩形堆叠模拟）
+  const bgSteps = 30;
+  for (let i = 0; i < bgSteps; i++) {
+    const t = i / bgSteps;
+    page.drawRectangle({
+      x: 0, y: H - (i + 1) * (H * 0.55 / bgSteps),
+      width: W, height: H * 0.55 / bgSteps + 1,
+      color: rgb(
+        0.482 + (0.925 - 0.482) * t,
+        0.227 + (0.282 - 0.227) * t,
+        0.929 + (0.6 - 0.929) * t
+      ),
+    });
+  }
+
+  // 装饰几何 - 右上角圆环
+  page.drawCircle({ x: W - 50, y: H - 80, size: 80, borderColor: rgb(1, 1, 1), borderWidth: 1, opacity: 0.15 });
+  page.drawCircle({ x: W - 50, y: H - 80, size: 50, borderColor: rgb(1, 1, 1), borderWidth: 1, opacity: 0.2 });
+  page.drawCircle({ x: W - 50, y: H - 80, size: 25, color: rgb(1, 1, 1), opacity: 0.1 });
+
+  // 装饰点阵
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 12; c++) {
+      page.drawCircle({
+        x: 30 + c * 12, y: H - 200 - r * 12,
+        size: 1.2,
+        color: rgb(1, 1, 1), opacity: 0.18,
+      });
+    }
+  }
+
+  // 顶部小标签
+  page.drawRectangle({
+    x: PADDING, y: H - 95, width: 110, height: 26, color: rgb(1, 1, 1), opacity: 0.18,
+  });
+  page.drawText('CONTROLLED PDF STUDIO', {
+    x: PADDING + 8, y: H - 88, size: 9, font: fontENBold, color: rgb(1, 1, 1),
+  });
+
+  // 主标题
+  page.drawText('受控PDF盖章工具', {
+    x: PADDING, y: H - 160, size: 36, font, color: rgb(1, 1, 1),
+  });
+
+  // 副标题
+  page.drawText('给机械零件受控库 PDF 一键加盖电子受控印章', {
+    x: PADDING, y: H - 195, size: 12, font, color: rgb(0.95, 0.93, 1),
+  });
+
+  // 一条短色块
+  page.drawRectangle({
+    x: PADDING, y: H - 220, width: 40, height: 3, color: rgb(1, 1, 1),
+  });
+
+  // 版本信息
+  page.drawText('v1.0.5', {
+    x: PADDING, y: H - 250, size: 14, font: fontENBold, color: rgb(1, 1, 1),
+  });
+  page.drawText('Windows · 桌面应用', {
+    x: PADDING + 50, y: H - 248, size: 10, font, color: rgb(0.95, 0.93, 1),
+  });
+
+  // ========== 中段：关键数据卡片 ==========
+  const dataCards = [
+    { num: '671', label: '受控 PDF\n图纸总数' },
+    { num: '4', label: '核心模块' },
+    { num: '<1s', label: '单文件加章\n平均耗时' },
+    { num: '100%', label: '中文图纸\n兼容' },
+  ];
+  const cardY = H * 0.45;
+  const cardW = (CONTENT_W - 30) / 4;
+  for (let i = 0; i < dataCards.length; i++) {
+    const d = dataCards[i];
+    const x = PADDING + i * (cardW + 10);
+    page.drawRectangle({
+      x, y: cardY - 90, width: cardW, height: 90,
+      color: COLOR.white,
+      borderColor: COLOR.cardBorder, borderWidth: 0.5,
+    });
+    page.drawText(d.num, {
+      x: x + 12, y: cardY - 38, size: 22, font: fontENBold, color: COLOR.primary,
+    });
+    const labelLines = d.label.split('\n');
+    for (let li = 0; li < labelLines.length; li++) {
+      page.drawText(labelLines[li], {
+        x: x + 12, y: cardY - 56 - li * 11, size: 9, font, color: COLOR.muted,
+      });
+    }
+  }
+
+  // ========== 下段：4 个核心特性 ==========
+  const features = [
+    ['📄', '单文件精调', '拖拽印章 · 实时预览 · 智能适应'],
+    ['📁', '批量处理',   '多图幅自适应 · 自动跳过已加章'],
+    ['⭐', '模板系统',   '保存常用配置 · JSON 团队共享'],
+    ['🎯', '智能透明度', '检测目标区域，自动调整透明度'],
+  ];
+  const featStartY = cardY - 130;
+  for (let i = 0; i < features.length; i++) {
+    const f = features[i];
+    const x = PADDING + (i % 2) * (CONTENT_W / 2 + 5);
+    const y = featStartY - Math.floor(i / 2) * 70;
+    page.drawRectangle({
+      x, y: y - 56, width: CONTENT_W / 2 - 5, height: 56,
+      color: COLOR.cardBg,
+      borderColor: COLOR.divider, borderWidth: 0.5,
+    });
+    page.drawText(f[0], { x: x + 14, y: y - 28, size: 18, font });
+    page.drawText(f[1], { x: x + 44, y: y - 22, size: 11, font, color: COLOR.ink });
+    page.drawText(f[2], { x: x + 44, y: y - 40, size: 8.5, font, color: COLOR.muted });
+  }
+
+  // 底部色条
+  page.drawRectangle({
+    x: 0, y: 0, width: W, height: 50, color: COLOR.ink,
+  });
+  page.drawRectangle({
+    x: 0, y: 50, width: W, height: 3, color: COLOR.accent,
+  });
+  page.drawText('深圳市无穹创新科技有限公司', {
+    x: PADDING, y: 27, size: 10, font, color: rgb(1, 1, 1),
+  });
+  page.drawText('Shenzhen Wuqiong Innovation Technology Co., Ltd.', {
+    x: PADDING, y: 12, size: 7.5, font: fontEN, color: rgb(0.7, 0.72, 0.78),
+  });
+  page.drawText('© 2026', {
+    x: W - PADDING - 35, y: 27, size: 9, font: fontEN, color: rgb(0.7, 0.72, 0.78),
+  });
+}
+
+// ==================== 目录页 ====================
+function drawTocPage({ pdfDoc, font, fontEN, fontENBold }) {
+  const page = pdfDoc.addPage([W, H]);
+  let y = H - 80;
+
+  // 页眉
+  page.drawText('TABLE OF CONTENTS', {
+    x: PADDING, y: y, size: 9, font: fontENBold, color: COLOR.primary,
+  });
+  y -= 30;
+  page.drawText('目', { x: PADDING, y, size: 36, font, color: COLOR.ink });
+  page.drawText('录', { x: PADDING + 50, y, size: 36, font, color: COLOR.ink });
+  y -= 30;
+  page.drawRectangle({ x: PADDING, y, width: 60, height: 3, color: COLOR.primary });
+  y -= 50;
+
+  const toc = [
+    ['01', '项目背景',         '为什么需要这个工具',                 3],
+    ['02', '核心功能',         '5 大模块功能概述',                   3],
+    ['03', '使用说明',         '安装 · 单文件 · 批量 全流程指引',    4],
+    ['04', '印章设计',         '编号格式 / 文件名解析规则',          5],
+    ['05', '常见问题',         '高频问题答疑',                       5],
+    ['06', '技术栈',           '开源依赖致谢',                       5],
+  ];
+
+  for (const [num, title, sub, pn] of toc) {
+    // 序号
+    page.drawText(num, {
+      x: PADDING, y: y, size: 22, font: fontENBold, color: COLOR.primary,
+    });
+    // 标题
+    page.drawText(title, {
+      x: PADDING + 50, y: y + 4, size: 16, font, color: COLOR.ink,
+    });
+    // 副标题
+    page.drawText(sub, {
+      x: PADDING + 50, y: y - 14, size: 9, font, color: COLOR.muted,
+    });
+    // 虚线 + 页码
+    const dotsX = PADDING + 50 + font.widthOfTextAtSize(title, 16) + 12;
+    const dotsEndX = W - PADDING - 20;
+    for (let dx = dotsX; dx < dotsEndX; dx += 5) {
+      page.drawCircle({ x: dx, y: y + 8, size: 0.6, color: COLOR.hint });
+    }
+    page.drawText(String(pn), {
+      x: W - PADDING - 12, y, size: 14, font: fontENBold, color: COLOR.primary,
+    });
+    y -= 50;
+  }
+}
+
+// ==================== 通用：内容页绘图状态 ====================
+class PageState {
+  constructor(pdfDoc, font, fontEN, fontENBold) {
+    this.pdfDoc = pdfDoc;
+    this.font = font;
+    this.fontEN = fontEN;
+    this.fontENBold = fontENBold;
+    this.page = null;
+    this.y = 0;
+    this.newPage();
+  }
+
+  newPage() {
+    this.page = this.pdfDoc.addPage([W, H]);
+    this.y = H - 70;
+  }
+
+  ensure(needed) {
+    if (this.y - needed < 60) this.newPage();
+  }
+
+  // 大章节标题 "01" + 标题
+  chapter(num, title, subtitle) {
+    this.ensure(90);
+    // 大号灰色序号
+    this.page.drawText(num, {
+      x: PADDING, y: this.y - 36, size: 56, font: this.fontENBold,
+      color: COLOR.primaryLight,
+    });
+    // 中号标题，右侧
+    this.page.drawText(title, {
+      x: PADDING + 95, y: this.y - 16, size: 22, font: this.font, color: COLOR.ink,
+    });
+    if (subtitle) {
+      this.page.drawText(subtitle, {
+        x: PADDING + 95, y: this.y - 36, size: 10, font: this.font, color: COLOR.muted,
+      });
+    }
+    // 装饰线
+    this.page.drawRectangle({
+      x: PADDING + 95, y: this.y - 48, width: 30, height: 2, color: COLOR.primary,
+    });
+    this.y -= 70;
+  }
+
+  // 二级标题 - 带左侧色块
+  h2(text) {
+    this.ensure(34);
+    this.page.drawRectangle({
+      x: PADDING, y: this.y - 14, width: 4, height: 14, color: COLOR.primary,
+    });
+    this.page.drawText(text, {
+      x: PADDING + 12, y: this.y - 12, size: FONT_SIZE.h2,
+      font: this.font, color: COLOR.ink,
+    });
+    this.y -= 24;
+  }
+
+  // 三级标题
+  h3(text) {
+    this.ensure(20);
+    this.page.drawText(text, {
+      x: PADDING, y: this.y - 10, size: FONT_SIZE.h3,
+      font: this.font, color: COLOR.primary,
+    });
+    this.y -= 18;
+  }
+
+  // 正文段落
+  p(text, opts = {}) {
+    const size = opts.size || FONT_SIZE.body;
+    const color = opts.color || COLOR.text;
+    const lh = size * 1.6;
+    const indent = opts.indent || 0;
+    const x0 = PADDING + indent;
+    const wrapW = CONTENT_W - indent;
+    const lines = wrapText(text, this.font, size, wrapW);
+    for (const line of lines) {
+      this.ensure(lh);
+      this.page.drawText(line, { x: x0, y: this.y - size, size, font: this.font, color });
+      this.y -= lh;
+    }
+    this.y -= 2;
+  }
+
+  // 列表项 - 圆点
+  li(text) {
+    this.ensure(18);
+    const size = FONT_SIZE.body;
+    this.page.drawCircle({ x: PADDING + 5, y: this.y - 5, size: 2, color: COLOR.primary });
+    const lines = wrapText(text, this.font, size, CONTENT_W - 16);
+    let first = true;
+    for (const line of lines) {
+      this.ensure(size * 1.55);
+      this.page.drawText(line, {
+        x: PADDING + 14, y: this.y - size,
+        size, font: this.font, color: first ? COLOR.text : COLOR.muted,
+      });
+      this.y -= size * 1.55;
+      first = false;
+    }
+  }
+
+  // 步骤项 - 带圆形数字
+  step(num, title, desc) {
+    this.ensure(36);
+    // 圆形数字徽章
+    this.page.drawCircle({
+      x: PADDING + 10, y: this.y - 12, size: 10, color: COLOR.primary,
+    });
+    this.page.drawText(String(num), {
+      x: PADDING + 6, y: this.y - 16, size: 11, font: this.fontENBold, color: COLOR.white,
+    });
+    // 标题
+    this.page.drawText(title, {
+      x: PADDING + 28, y: this.y - 10, size: 11, font: this.font, color: COLOR.ink,
+    });
+    this.y -= 16;
+    // 描述
+    const lines = wrapText(desc, this.font, FONT_SIZE.small, CONTENT_W - 30);
+    for (const ln of lines) {
+      this.ensure(15);
+      this.page.drawText(ln, {
+        x: PADDING + 28, y: this.y - FONT_SIZE.small, size: FONT_SIZE.small,
+        font: this.font, color: COLOR.muted,
+      });
+      this.y -= 14;
+    }
+    this.y -= 6;
+  }
+
+  // 提示卡片
+  callout(kind, title, text) {
+    const cfg = {
+      info: { bg: COLOR.blueLight, accent: COLOR.blue, icon: '💡' },
+      success: { bg: COLOR.greenLight, accent: COLOR.green, icon: '✓' },
+      warn: { bg: COLOR.amberLight, accent: COLOR.amber, icon: '⚠' },
+      tip: { bg: COLOR.primaryLight, accent: COLOR.primary, icon: '★' },
+    }[kind] || { bg: COLOR.cardBg, accent: COLOR.text, icon: '·' };
+    const lines = wrapText(text, this.font, FONT_SIZE.small, CONTENT_W - 50);
+    const h = 12 + 16 + lines.length * 14 + 8;
+    this.ensure(h + 10);
+    // 背景
+    this.page.drawRectangle({
+      x: PADDING, y: this.y - h, width: CONTENT_W, height: h,
+      color: cfg.bg,
+    });
+    // 左侧 accent 竖条
+    this.page.drawRectangle({
+      x: PADDING, y: this.y - h, width: 3, height: h, color: cfg.accent,
+    });
+    // 标题
+    this.page.drawText(`${cfg.icon} ${title}`, {
+      x: PADDING + 14, y: this.y - 16, size: 10.5, font: this.font, color: cfg.accent,
+    });
+    // 正文
+    let ty = this.y - 30;
+    for (const ln of lines) {
+      this.page.drawText(ln, {
+        x: PADDING + 14, y: ty, size: FONT_SIZE.small, font: this.font, color: COLOR.text,
+      });
+      ty -= 14;
+    }
+    this.y -= h + 10;
+  }
+
+  // 表格（带斑马纹）
+  table(headers, rows, colWidths) {
+    const rowH = 26;
+    const headerH = 28;
+    const total = headers.length;
+    if (!colWidths) {
+      colWidths = new Array(total).fill(CONTENT_W / total);
+    }
+    this.ensure(headerH + rows.length * rowH + 10);
+
+    // 表头
+    this.page.drawRectangle({
+      x: PADDING, y: this.y - headerH, width: CONTENT_W, height: headerH,
+      color: COLOR.primary,
+    });
+    let x = PADDING;
+    for (let i = 0; i < headers.length; i++) {
+      this.page.drawText(headers[i], {
+        x: x + 10, y: this.y - 18,
+        size: 10, font: this.font, color: COLOR.white,
+      });
+      x += colWidths[i];
+    }
+    this.y -= headerH;
+
+    // 行
+    for (let r = 0; r < rows.length; r++) {
+      if (r % 2 === 0) {
+        this.page.drawRectangle({
+          x: PADDING, y: this.y - rowH, width: CONTENT_W, height: rowH,
+          color: COLOR.cardBg,
+        });
+      }
+      x = PADDING;
+      for (let i = 0; i < headers.length; i++) {
+        const cellLines = wrapText(String(rows[r][i] ?? ''), this.font, 9, colWidths[i] - 16);
+        for (let li = 0; li < Math.min(2, cellLines.length); li++) {
+          this.page.drawText(cellLines[li], {
+            x: x + 10, y: this.y - 14 - li * 11,
+            size: 9, font: this.font, color: COLOR.text,
+          });
+        }
+        x += colWidths[i];
+      }
+      // 下边线
+      this.page.drawRectangle({
+        x: PADDING, y: this.y - rowH, width: CONTENT_W, height: 0.5,
+        color: COLOR.divider,
+      });
+      this.y -= rowH;
+    }
+    this.y -= 10;
+  }
+
+  vspace(h) { this.y -= h; }
+}
+
+// ==================== Section 1: 项目背景 ====================
+function drawSection1(ctx) {
+  const s = new PageState(ctx.pdfDoc, ctx.font, ctx.fontEN, ctx.fontENBold);
+  s.chapter('01', '项目背景', 'Project Background');
+
+  s.p('公司机械零件受控库存有 671 份 PDF 图纸，涵盖 CAD 机加件、塑胶件、PCBA、外购模组等多种类型。传统人工区分"受控 vs 非受控"依赖目录命名 + 口头约定，混淆风险高。');
+  s.vspace(4);
+
+  s.callout('warn', '业务痛点',
+    '一份过期的或未受控的图纸如果被误传到供应商，可能直接导致投产返工。受控库管理的核心诉求是"任何人看到 PDF 第一眼就能识别这是不是公司官方受控件"。');
+
+  s.h2('解决目标');
+  s.p('给受控库每一份 PDF 自动加盖统一格式的电子受控印章，印章包含：');
+
+  // 关键字段卡片
+  const fields = [
+    { name: '编号', value: 'M.M.1.0028.04' },
+    { name: '版本', value: 'Rev.04' },
+    { name: '受控日期', value: '2026-05-17' },
+    { name: '操作人', value: '冯智超' },
+  ];
+  const cardW = (CONTENT_W - 30) / 4;
+  s.ensure(70);
+  for (let i = 0; i < fields.length; i++) {
+    const x = PADDING + i * (cardW + 10);
+    s.page.drawRectangle({
+      x, y: s.y - 60, width: cardW, height: 60,
+      color: COLOR.primaryLight,
+    });
+    s.page.drawText(fields[i].name, {
+      x: x + 12, y: s.y - 20, size: 9, font: s.font, color: COLOR.primary,
+    });
+    s.page.drawText(fields[i].value, {
+      x: x + 12, y: s.y - 42, size: 10, font: s.font, color: COLOR.ink,
+    });
+  }
+  s.y -= 70;
+
+  s.callout('tip', '自动化',
+    '所有字段从文件名自动解析，支持公司全部前缀格式：M.M / M.A / M.E.E / M.E.H / M.E.0，以及版本号字母前缀（PL 胚料 / LS 临时）。');
+}
+
+// ==================== Section 2: 核心功能 ====================
+function drawSection2(ctx) {
+  const s = new PageState(ctx.pdfDoc, ctx.font, ctx.fontEN, ctx.fontENBold);
+  s.chapter('02', '核心功能', 'Core Features');
+
+  const modules = [
+    { icon: '📄', name: '单文件模式', desc: '拖拽印章·实时预览·自动适应窗口·Ctrl+滚轮缩放·印章信息不完整时按钮锁定' },
+    { icon: '📁', name: '批量模式',   desc: '选目录或多选文件·自动跳过已加章·按各自图幅自适应位置·支持仅首页·处理后生成日志' },
+    { icon: '⭐', name: '模板系统',   desc: '保存常用印章样式·JSON 导出/导入·便于多台机器或团队成员共享' },
+    { icon: '🎯', name: '智能透明度', desc: '盖章前渲染目标区域统计非白像素，盖在空白处用实色 0.95，覆盖文字自动半透明 0.6' },
+    { icon: '🖱', name: '右键集成',   desc: '设置页一键安装到 HKEY_CURRENT_USER，右键 PDF "用受控PDF工具打开"，不需要管理员' },
+  ];
+  for (const m of modules) {
+    s.ensure(60);
+    s.page.drawRectangle({
+      x: PADDING, y: s.y - 50, width: CONTENT_W, height: 50,
+      color: COLOR.cardBg,
+      borderColor: COLOR.divider, borderWidth: 0.5,
+    });
+    s.page.drawRectangle({
+      x: PADDING, y: s.y - 50, width: 3, height: 50, color: COLOR.primary,
+    });
+    s.page.drawText(m.icon, { x: PADDING + 16, y: s.y - 30, size: 20, font: s.font });
+    s.page.drawText(m.name, {
+      x: PADDING + 48, y: s.y - 18, size: 12, font: s.font, color: COLOR.ink,
+    });
+    const descLines = wrapText(m.desc, s.font, 9, CONTENT_W - 70);
+    let dy = s.y - 32;
+    for (const ln of descLines.slice(0, 2)) {
+      s.page.drawText(ln, {
+        x: PADDING + 48, y: dy, size: 9, font: s.font, color: COLOR.muted,
+      });
+      dy -= 12;
+    }
+    s.y -= 58;
+  }
+}
+
+// ==================== Section 3: 使用说明 ====================
+function drawSection3(ctx) {
+  const s = new PageState(ctx.pdfDoc, ctx.font, ctx.fontEN, ctx.fontENBold);
+  s.chapter('03', '使用说明', 'User Guide');
+
+  s.h2('安装版本选择');
+
+  // 对比表格
+  s.table(
+    ['版本',         '适用场景',                       '推荐'],
+    [
+      ['📦 安装版',  '日常工作用 · 桌面快捷方式 · 右键菜单 · 一键卸载', '⭐⭐⭐'],
+      ['💼 便携版',  '临时使用 · U 盘携带 · 不希望系统留痕',           '⭐⭐'],
+    ],
+    [110, 360, 75]
+  );
+
+  s.callout('warn', 'Windows 安全提示',
+    '由于没有购买代码签名证书，Windows 可能弹"不受信任的发布者"对话框。点 "更多信息 → 仍要运行" 即可。所有源码在公司 Git 仓库可审计。');
+
+  s.h2('单文件流程（5 步）');
+  s.step(1, '打开 PDF', '点工具栏 "📂 打开 PDF" 或直接把文件拖入窗口');
+  s.step(2, '填写印章信息', '右侧"印章信息"卡片：零件号 / 版本 / 受控日期 / 操作人 (操作人会自动记住，下次打开自动填)');
+  s.step(3, '调整印章', '在预览中拖动印章 / 拉伸边角调整大小 / 右侧面板改字号或颜色');
+  s.step(4, '应用并导出', '点蓝色 "💾 应用并导出"，输出到源 PDF 同目录的 _stamped/ 子文件夹');
+  s.step(5, '查看结果', '完成后顶部出现绿色 "📂 打开输出位置"，点击直接定位到输出文件');
+
+  s.h2('批量流程（7 步）');
+  s.step(1, '切到批量模式', '左侧导航点 "📁 批量"');
+  s.step(2, '添加文件', '"选择目录"（含递归选项）或 "选择文件（多选）"');
+  s.step(3, '选印章模板', '默认用单文件模式调好的样式；或选择已保存的模板');
+  s.step(4, '填写操作人和受控日期', '操作人为空时按钮会锁定，无法运行');
+  s.step(5, '设置输出位置', '上次的位置会自动记住，可手动改');
+  s.step(6, '试运行（推荐）', '点紫色 "🔍 试运行"，不写文件，先看会处理哪些 + 智能透明度结果');
+  s.step(7, '正式处理', '检查无误后点 "▶ 开始处理 N 个文件"');
+}
+
+// ==================== Section 4 & 5: 印章设计 + 常见问题 ====================
+function drawSection4_5(ctx) {
+  const s = new PageState(ctx.pdfDoc, ctx.font, ctx.fontEN, ctx.fontENBold);
+  s.chapter('04', '印章设计', 'Stamp Design');
+
+  s.h2('印章布局');
+  s.p('印章默认包含 5 行信息，整体为带双线红框的矩形卡片，水平居中布局，文字块块整体居中、行内左对齐。');
+
+  s.h2('编号格式表');
+  s.table(
+    ['前缀模式',     '业务含义',        '示例'],
+    [
+      ['M.M.1.XXXX.YY', '机加件',     'M.M.1.0028.04'],
+      ['M.A.1.XXXX.YY', '机械总成',   'M.A.1.0006.01'],
+      ['M.E.E.XXXX.YY', '电子板卡',   'M.E.E.0014.04'],
+      ['M.E.H.XXXX.YY', '线材',       'M.E.H.0015.02'],
+      ['M.E.0.XXXX',    '外购模组',   'M.E.0.0026'],
+      ['M.M.1.XXXX.PL03', '胚料件（未后处理）', 'M.M.1.0092.PL03'],
+      ['M.M.1.XXXX.LS01', '临时物料',  'M.M.1.0123.LS01'],
+    ],
+    [180, 200, 165]
+  );
+
+  s.callout('info', '正则规则',
+    '/^(M\\.[A-Z0-9](?:\\.[A-Z0-9])?\\.\\d{4})(?:\\.([A-Z]{0,3}\\d{2}))?\\b/  匹配前缀 + 4 位零件号 + 可选字母前缀 + 2 位版本号。');
+
+  s.chapter('05', '常见问题', 'FAQ');
+
+  const faqs = [
+    {
+      q: '已加章的 PDF 重新打开有警告？',
+      a: '系统通过 PDF 元数据识别"是否曾被本工具加章"。重新加章会生成新副本（原文件不变）。'
+    },
+    {
+      q: '批量某些 PDF 处理失败？',
+      a: '通常是 PDF 内部结构非标准（如 Word/旧版工具导出）。建议先用 Acrobat 打开另存为标准 PDF 再处理。'
+    },
+    {
+      q: '输出 PDF 能编辑/复制吗？',
+      a: '矢量印章写入 PDF 内容流深层，Acrobat 编辑工具难直接选中删除。内部使用场景下足够防误操作。'
+    },
+    {
+      q: '多台机器共享模板？',
+      a: '模板页点 "📤 导出 JSON"，把 JSON 给同事，对方 "📥 导入 JSON" 即可。'
+    },
+  ];
+  for (const f of faqs) {
+    s.ensure(50);
+    s.page.drawText('Q', {
+      x: PADDING, y: s.y - 10, size: 14, font: s.fontENBold, color: COLOR.primary,
+    });
+    s.page.drawText(f.q, {
+      x: PADDING + 18, y: s.y - 10, size: 11, font: s.font, color: COLOR.ink,
+    });
+    s.y -= 18;
+    s.page.drawText('A', {
+      x: PADDING, y: s.y - 10, size: 14, font: s.fontENBold, color: COLOR.accent,
+    });
+    const lines = wrapText(f.a, s.font, 9.5, CONTENT_W - 22);
+    for (const ln of lines) {
+      s.page.drawText(ln, {
+        x: PADDING + 18, y: s.y - 10, size: 9.5, font: s.font, color: COLOR.text,
+      });
+      s.y -= 14;
+    }
+    s.y -= 10;
+  }
+}
+
+// ==================== Section 6: 技术栈 ====================
+function drawSection6(ctx) {
+  const s = new PageState(ctx.pdfDoc, ctx.font, ctx.fontEN, ctx.fontENBold);
+  s.chapter('06', '技术栈 & 致谢', 'Tech Stack & Credits');
+
+  const stacks = [
+    { layer: '桌面运行时', tech: 'Electron 42',                  desc: 'Chromium + Node.js 跨平台框架' },
+    { layer: '渲染进程',   tech: 'React 19 + TypeScript + Vite 8', desc: '现代前端开发体验，HMR 热更新' },
+    { layer: 'PDF 写入',   tech: 'pdf-lib + @pdf-lib/fontkit',   desc: '纯 JS 操作 PDF，矢量印章 + 字体子集化' },
+    { layer: 'PDF 渲染',   tech: 'pdf.js (Mozilla, legacy)',     desc: '浏览器端 PDF 显示 + 内容检测' },
+    { layer: '中文字体',   tech: 'SimHei (思源黑体)',            desc: '系统自带 + 子集化嵌入，输出 PDF 跨设备无差异' },
+    { layer: '打包',       tech: 'electron-builder + NSIS',      desc: 'portable + 标准安装包两种格式' },
+  ];
+  for (const it of stacks) {
+    s.ensure(48);
+    s.page.drawRectangle({
+      x: PADDING, y: s.y - 40, width: CONTENT_W, height: 40,
+      color: COLOR.cardBg,
+    });
+    s.page.drawRectangle({
+      x: PADDING, y: s.y - 40, width: 70, height: 40,
+      color: COLOR.primary,
+    });
+    s.page.drawText(it.layer, {
+      x: PADDING + 8, y: s.y - 22, size: 9, font: s.font, color: COLOR.white,
+    });
+    s.page.drawText(it.tech, {
+      x: PADDING + 80, y: s.y - 16, size: 11, font: s.font, color: COLOR.ink,
+    });
+    s.page.drawText(it.desc, {
+      x: PADDING + 80, y: s.y - 32, size: 9, font: s.font, color: COLOR.muted,
+    });
+    s.y -= 48;
+  }
+
+  s.vspace(20);
+
+  s.callout('tip', '感谢',
+    '本工具基于多个优秀的开源项目构建。所有依赖遵循其原始许可协议（详见 node_modules / LICENSES.chromium.html）。');
+
+  // 结尾签名
+  s.ensure(80);
+  s.page.drawRectangle({
+    x: PADDING, y: s.y - 50, width: CONTENT_W, height: 50,
+    color: COLOR.ink,
+  });
+  s.page.drawText('深圳市无穹创新科技有限公司', {
+    x: PADDING + 20, y: s.y - 24, size: 12, font: s.font, color: rgb(1, 1, 1),
+  });
+  s.page.drawText('Shenzhen Wuqiong Innovation Technology Co., Ltd.', {
+    x: PADDING + 20, y: s.y - 40, size: 8, font: s.fontEN, color: rgb(0.7, 0.72, 0.78),
+  });
+  s.page.drawText('v1.0.5', {
+    x: W - PADDING - 60, y: s.y - 28, size: 18, font: s.fontENBold, color: COLOR.accent,
+  });
+}
