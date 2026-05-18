@@ -1,9 +1,0 @@
-docs(v1.0.6): CHANGELOG + Release Notes + 使用说明 PDF 更新
-
-- CHANGELOG.md：首次添加，记录 v1.0.0 / v1.0.5 / v1.0.6 三版历史
-- docs/release-notes-v1.0.6.md：GitHub Release 描述模板
-- docs/generate-intro-pdf.cjs：
-  · Section 2 新增 v1.0.6 升级 callout 和 3 个加密相关功能模块
-  · FAQ 更新过时的"可编辑"答案，新增密码 / 老文件迁移问题
-  · 技术栈加入 qpdf 11.10
-- docs/受控PDF盖章工具-使用说明-v1.0.6.pdf：重新生成，9 页 / 116 KB

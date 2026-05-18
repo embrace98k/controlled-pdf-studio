@@ -56,3 +56,6 @@ build/_qpdf_tmp/
 
 # 烟雾测试输出
 _smoke_out/
+
+# 临时 commit 消息草稿
+_commit_msg.txt
