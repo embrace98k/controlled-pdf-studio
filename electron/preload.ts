@@ -37,7 +37,17 @@ contextBridge.exposeInMainWorld('api', {
     currentPage: number,
     autoPlace?: boolean,
     skipIfStamped?: boolean
-  ): Promise<{ ok: boolean; error?: string; skipped?: boolean; sizeIn?: number; sizeOut?: number }> =>
+  ): Promise<{
+    ok: boolean;
+    error?: string;
+    skipped?: boolean;
+    sizeIn?: number;
+    sizeOut?: number;
+    finalPath?: string;
+    hash?: string;
+    encrypted?: boolean;
+    readonly?: boolean;
+  }> =>
     ipcRenderer.invoke(
       'pdf:stampFile',
       input,
@@ -118,7 +128,17 @@ declare global {
         currentPage: number,
         autoPlace?: boolean,
         skipIfStamped?: boolean
-      ) => Promise<{ ok: boolean; error?: string; skipped?: boolean; sizeIn?: number; sizeOut?: number }>;
+      ) => Promise<{
+        ok: boolean;
+        error?: string;
+        skipped?: boolean;
+        sizeIn?: number;
+        sizeOut?: number;
+        finalPath?: string;
+        hash?: string;
+        encrypted?: boolean;
+        readonly?: boolean;
+      }>;
       checkStamped: (input: string) => Promise<boolean>;
       stampPdfBytes: (
         bytes: Uint8Array,

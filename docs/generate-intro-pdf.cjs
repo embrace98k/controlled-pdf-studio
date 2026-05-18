@@ -77,7 +77,7 @@ const FONT_SIZE = {
     drawFooter(pages[i], FONT, FONT_EN, i + 1, pages.length);
   }
 
-  const outPath = path.join(__dirname, '受控PDF盖章工具-使用说明-v1.0.5.pdf');
+  const outPath = path.join(__dirname, '受控PDF盖章工具-使用说明-v1.0.6.pdf');
   const bytes = await pdfDoc.save({ useObjectStreams: true });
   fs.writeFileSync(outPath, bytes);
   console.log('✓', outPath);
@@ -113,7 +113,7 @@ function drawFooter(page, font, fontEN, pageNum, total) {
   page.drawText('受控PDF盖章工具', {
     x: PADDING + 38, y: H - 25, size: 8, font, color: COLOR.muted,
   });
-  page.drawText('v1.0.5  ·  使用说明', {
+  page.drawText('v1.0.6  ·  使用说明', {
     x: PADDING + 38 + font.widthOfTextAtSize('受控PDF盖章工具', 8) + 8,
     y: H - 25, size: 8, font, color: COLOR.hint,
   });
@@ -189,7 +189,7 @@ function drawCoverPage({ pdfDoc, font, fontEN, fontENBold }) {
   });
 
   // 版本信息
-  page.drawText('v1.0.5', {
+  page.drawText('v1.0.6', {
     x: PADDING, y: H - 250, size: 14, font: fontENBold, color: rgb(1, 1, 1),
   });
   page.drawText('Windows · 桌面应用', {
@@ -776,7 +776,7 @@ function drawSection6(ctx) {
   s.page.drawText('Shenzhen Wuqiong Innovation Technology Co., Ltd.', {
     x: PADDING + 20, y: s.y - 40, size: 8, font: s.fontEN, color: rgb(0.7, 0.72, 0.78),
   });
-  s.page.drawText('v1.0.5', {
+  s.page.drawText('v1.0.6', {
     x: W - PADDING - 60, y: s.y - 28, size: 18, font: s.fontENBold, color: COLOR.accent,
   });
 }

@@ -1,8 +1,8 @@
 {
   "name": "controlled-pdf-studio",
   "private": true,
-  "version": "1.0.5",
-  "description": "受控PDF盖章工具 - 给机械零件受控库 PDF 加受控印章",
+  "version": "1.0.6",
+  "description": "受控PDF盖章工具 - 给机械零件受控库 PDF 加受控印章 + 防篡改加密",
   "author": "深圳市无穹创新科技有限公司",
   "main": "dist-electron/main.cjs",
   "type": "module",
@@ -11,6 +11,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "setup:qpdf": "node scripts/setup-qpdf.cjs",
+    "prepack": "node scripts/setup-qpdf.cjs",
     "pack": "vite build && electron-builder --dir",
     "dist": "vite build && electron-builder",
     "dist:portable": "vite build && electron-builder --win portable"
@@ -35,12 +37,29 @@
       {
         "from": "build/icon.ico",
         "to": "icon.ico"
+      },
+      {
+        "from": "build/qpdf",
+        "to": "qpdf",
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "win": {
       "target": [
-        { "target": "portable", "arch": ["x64"] },
-        { "target": "nsis", "arch": ["x64"] }
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
       "icon": "build/icon.ico",
       "legalTrademarks": "深圳市无穹创新科技有限公司",

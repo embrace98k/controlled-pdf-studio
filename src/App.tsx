@@ -153,8 +153,8 @@ export default function App() {
         `正在生成 PDF ... 非白 ${(det.ratio * 100).toFixed(1)}% → 透明度 ${det.hasContent ? '0.6' : '0.95'}`
       );
 
-      const baseName = (store.state.pdfFileName || 'output.pdf').replace(/\.pdf$/i, '');
-      const outName = `${baseName}_stamped.pdf`;
+      // 输出文件名保持源文件名不变；主进程会在末尾追加 【受控】 后缀
+      const outName = store.state.pdfFileName || 'output.pdf';
 
       if (isElectron && store.state.pdfSourcePath) {
         // ★ Electron 模式：直接通过主进程把文件写到源目录的 _stamped/
@@ -173,8 +173,15 @@ export default function App() {
           false,   // skipIfStamped=false：单文件模式总是处理
         );
         if (result.ok) {
-          setLastSavedPath(outPath);
-          setStatus(`✓ 已保存：${outPath} · ${result.sizeOut! / 1024 | 0} KB`);
+          const final = result.finalPath || outPath;
+          setLastSavedPath(final);
+          const sizeKB = ((result.sizeOut || 0) / 1024).toFixed(0);
+          const flags: string[] = [];
+          if (result.encrypted) flags.push('已加密');
+          if (result.readonly) flags.push('只读');
+          if (result.hash) flags.push(`SHA256: ${result.hash}`);
+          const tail = flags.length ? ` · ${flags.join(' · ')}` : '';
+          setStatus(`✓ 已保存：${final} · ${sizeKB} KB${tail}`);
         } else {
           setStatus(`✗ 失败：${result.error}`);
         }
@@ -276,7 +283,7 @@ export default function App() {
     >
       <header style={headerStyle}>
         <div style={{ fontWeight: 700, fontSize: 14 }}>
-          📄 受控PDF盖章工具 {isElectron ? '· 桌面版 v1.0.5' : '· Web 版 v1.0.5'}
+          📄 受控PDF盖章工具 {isElectron ? '· 桌面版 v1.0.6' : '· Web 版 v1.0.6'}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           {mode === 'single' && (
@@ -395,7 +402,7 @@ export default function App() {
 
       <footer style={footerStyle}>
         <span>{status}</span>
-        <span style={{ color: '#666' }}>v1.0.5 {isElectron ? '桌面版' : 'Web 版'}</span>
+        <span style={{ color: '#666' }}>v1.0.6 {isElectron ? '桌面版' : 'Web 版'}</span>
       </footer>
 
       {tplModalOpen && (
@@ -536,7 +543,7 @@ function SettingsView({ isElectron }: { isElectron: boolean }) {
       </div>
 
       <div style={{ marginTop: 20, fontSize: 11, color: '#999' }}>
-        受控PDF盖章工具 v1.0.5 · Electron 桌面版 · © 2026 深圳市无穹创新科技有限公司
+        受控PDF盖章工具 v1.0.6 · Electron 桌面版 · © 2026 深圳市无穹创新科技有限公司
       </div>
     </div>
   );

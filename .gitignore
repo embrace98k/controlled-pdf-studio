@@ -49,3 +49,10 @@ _mockup.js
 _stamped/
 *_stamped/
 *_stamped.pdf
+
+# qpdf 二进制（由 scripts/setup-qpdf.cjs 下载，不入库）
+build/qpdf/
+build/_qpdf_tmp/
+
+# 烟雾测试输出
+_smoke_out/

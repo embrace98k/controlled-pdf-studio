@@ -2,7 +2,7 @@
 
 > 给机械零件受控库 PDF 一键加盖电子受控印章的 Windows 桌面工具。
 
-![version](https://img.shields.io/badge/version-1.0.5-blue) ![platform](https://img.shields.io/badge/platform-Windows-blue) ![electron](https://img.shields.io/badge/electron-42-9feaf9) ![react](https://img.shields.io/badge/react-19-61dafb)
+![version](https://img.shields.io/badge/version-1.0.6-blue) ![platform](https://img.shields.io/badge/platform-Windows-blue) ![electron](https://img.shields.io/badge/electron-42-9feaf9) ![react](https://img.shields.io/badge/react-19-61dafb) ![encrypted](https://img.shields.io/badge/AES--256-encrypted-success)
 
 ---
 
@@ -24,6 +24,9 @@
 | 🔍 **试运行** | 不写文件先预检测，损坏 PDF 提前暴露 |
 | 🎯 **智能透明度** | 检测目标区域内容密度，覆盖文字自动半透明 |
 | 🖱 **右键集成** | 资源管理器右键 PDF → "用受控PDF工具打开" |
+| 🔒 **AES-256 加密 + 权限锁定** | 输出 PDF 用 qpdf 加密，WPS / Acrobat / Foxit **无法编辑或删章** |
+| 🪪 **SHA256 防伪码** | 输出文件名自动追加哈希短码（如 `[a1b2c3d4]`），防止替换 |
+| 🛡 **系统只读** | 输出文件自动设为只读，避免无意覆盖 |
 
 ---
 
@@ -51,6 +54,7 @@ electron-builder  打包 portable + NSIS 安装包
 ### 安装依赖
 ```bash
 npm install
+npm run setup:qpdf     # 下载 qpdf 二进制（一次性）
 ```
 
 ### 开发模式
@@ -66,8 +70,8 @@ npm run dist:portable
 ```
 
 输出位置：`release/`
-- `受控PDF盖章工具-v1.0.5-便携版.exe` — 单文件免安装
-- `受控PDF盖章工具-v1.0.5-安装版.exe` — NSIS 标准安装（推荐）
+- `受控PDF盖章工具-v1.0.6-便携版.exe` — 单文件免安装
+- `受控PDF盖章工具-v1.0.6-安装版.exe` — NSIS 标准安装（推荐）
 
 ---
 
@@ -99,7 +103,7 @@ gui-web/
 │   ├── simhei.ttf        中文字体
 │   └── pdfjs/            pdf.js 字符映射表 + 标准字体
 └── docs/
-    └── 受控PDF盖章工具-使用说明-v1.0.5.pdf  用户使用手册
+    └── 受控PDF盖章工具-使用说明-v1.0.6.pdf  用户使用手册
 ```
 
 ---

@@ -251,12 +251,25 @@ export default function BatchPanel({ defaultStamp, buildMeta }: Props) {
             skipStamped,
           );
           if (result.ok) {
+            const finalOut = result.finalPath || outPath;
+            const flags: string[] = [];
+            if (result.encrypted) flags.push('已加密');
+            if (result.readonly) flags.push('只读');
+            if (result.hash) flags.push(result.hash);
+            const doneMsg = (detectMsg ? detectMsg + ' · ' : '') + flags.join(' · ');
             setItems((arr) =>
               arr.map((it, idx) =>
                 idx === i
                   ? result.skipped
-                    ? { ...it, status: 'skipped', message: '已加过章，跳过', sizeIn: result.sizeIn, outPath }
-                    : { ...it, status: 'done', sizeIn: result.sizeIn, sizeOut: result.sizeOut, outPath }
+                    ? { ...it, status: 'skipped', message: '已加过章，跳过', sizeIn: result.sizeIn, outPath: finalOut }
+                    : {
+                        ...it,
+                        status: 'done',
+                        sizeIn: result.sizeIn,
+                        sizeOut: result.sizeOut,
+                        outPath: finalOut,
+                        message: doneMsg,
+                      }
                   : it
               )
             );
