@@ -24,23 +24,24 @@
 | 🔍 **试运行** | 不写文件先预检测，损坏 PDF 提前暴露 |
 | 🎯 **智能透明度** | 检测目标区域内容密度，覆盖文字自动半透明 |
 | 🖱 **右键集成** | 资源管理器右键 PDF → "用受控PDF工具打开" |
-| 🔒 **AES-256 加密 + 权限锁定** | 输出 PDF 用 qpdf 加密，WPS / Acrobat / Foxit **无法编辑或删章** |
-| 🪪 **SHA256 防伪码** | 输出文件名自动追加哈希短码（如 `[a1b2c3d4]`），防止替换 |
-| 🛡 **系统只读** | 输出文件自动设为只读，避免无意覆盖 |
+| 🔒 **AES-256 加密 + 权限锁定** | 输出 PDF 用 qpdf 加密，WPS / Acrobat / Foxit **无法编辑、删章、加注释、拆页、抽取文字**，仅允许打印 |
+| 🪪 **【受控】文件名后缀** | 盖章后文件名自动追加 `【受控】`（如 `M.M.1.0033.pdf` → `M.M.1.0033【受控】.pdf`），肉眼一秒识别 |
+| 🛡 **SHA256 审计码 + 只读** | 输出文件计算 SHA256 前 8 位显示在 UI（仅审计，不进文件名）；同时自动设系统只读，避免无意覆盖 |
 
 ---
 
 ## 三、技术栈
 
 ```text
-Electron 42       桌面运行时
-React 19 + TS     渲染进程 UI
-Vite 8            构建系统
-pdf-lib           PDF 写入（矢量印章）
-pdf.js (legacy)   PDF 渲染 + 内容检测
-@pdf-lib/fontkit  中文字体子集化
-思源黑体 / SimHei  中文字体
-electron-builder  打包 portable + NSIS 安装包
+Electron 42         桌面运行时
+React 19 + TS       渲染进程 UI
+Vite 8              构建系统
+pdf-lib             PDF 内容流写入（矢量印章）
+pdf.js (legacy)     PDF 渲染 + 内容检测
+@pdf-lib/fontkit    中文字体子集化
+qpdf 11.10          AES-256 加密 + 权限锁定（Apache 2.0，约 11 MB）
+思源黑体 / SimHei    中文字体
+electron-builder    打包 portable + NSIS 安装包
 ```
 
 ---
@@ -98,12 +99,22 @@ gui-web/
 │   └── stampPlacement.ts 视觉坐标 → PDF 坐标变换
 ├── build/
 │   ├── icon.ico          应用图标
-│   └── installer.nsh     NSIS 自定义脚本（快捷方式图标）
+│   ├── installer.nsh     NSIS 自定义脚本（快捷方式图标）
+│   ├── README-qpdf.md    qpdf 二进制配置说明
+│   └── qpdf/             qpdf.exe + DLL（gitignored，由 setup 脚本生成）
+├── scripts/
+│   ├── setup-qpdf.cjs           一次性下载 qpdf v11.10
+│   └── smoke-test-encrypt.cjs   端到端加密管线烟雾测试
 ├── public/
 │   ├── simhei.ttf        中文字体
 │   └── pdfjs/            pdf.js 字符映射表 + 标准字体
-└── docs/
-    └── 受控PDF盖章工具-使用说明-v1.0.6.pdf  用户使用手册
+├── docs/
+│   ├── generate-intro-pdf.cjs           用户手册 PDF 生成脚本
+│   ├── release-notes-v1.0.6.md          GitHub Release 描述
+│   └── 受控PDF盖章工具-使用说明-v1.0.6.pdf  用户使用手册（9 页）
+├── CHANGELOG.md          版本历史
+├── LICENSE
+└── README.md             本文件
 ```
 
 ---
@@ -141,15 +152,54 @@ gui-web/
 
 ---
 
-## 七、已知限制
+## 七、安全设计（v1.0.6 起）
 
-- **不支持加密 PDF**：muhammara native 模块在 Windows 下编译复杂，已舍弃。需要加密的 PDF 请先用 Acrobat 解密
-- **NSIS 安装版需要点"更多信息 → 仍要运行"**：因为没有买代码签名证书。内部使用场景下没问题
-- **portable .exe 不建议安装右键菜单**：每次解压临时路径都变，右键菜单失效。请用 NSIS 安装版
+### 加密链路
+
+```text
+原 PDF
+  → pdf-lib 在内存里画印章（矢量）
+  → 写到临时文件
+  → qpdf --encrypt "" "<owner_pwd>" 256 [perm flags]
+  → AES-256 + 权限锁定（PDF 2.0 R=6）
+  → 计算 SHA256 → 重命名加 【受控】 后缀
+  → attrib +R → 系统只读
+  → 删临时文件
+最终文件
+```
+
+### 权限位
+
+| 操作 | 状态 |
+|---|---|
+| 打开浏览 / 打印 | ✅ 允许（不需要密码） |
+| 编辑文字 / 删受控章 / 加注释 / 拆页 / 抽取文字 | ❌ 拒绝 |
+
+### Owner 密码
+
+写死在 `electron/handlers/pdf.ts`。**不要在公开文档 / 邮件 / Wiki 中暴露**，否则等于没加密。建议归口管理员持有（IT + 受控库管理员 2~3 人）。
+
+### 加密挡得住 / 挡不住
+
+| 场景 | 状态 |
+|---|---|
+| WPS / Adobe / Foxit 常规编辑器删章改字 | ✅ 拒绝 |
+| 网上"PDF 解锁"工具绕过权限位 | ⚠ 仍可绕过（PDF 规范固有问题） |
+| 持有 owner 密码的人解锁 | ⚠ 可解锁 |
+| 任何篡改可审计追溯 | ❌ 需叠加数字签名（计划项） |
 
 ---
 
-## 八、开发者
+## 八、已知限制
+
+- **NSIS 安装版首次启动需点"更多信息 → 仍要运行"**：未购买代码签名证书，Windows SmartScreen 默认拦截。内部使用场景下没问题。
+- **portable .exe 不建议安装右键菜单**：每次解压临时路径都变，注册表里的右键菜单条目会失效。建议右键菜单只在 NSIS 安装版中使用。
+- **加密 owner 密码可被在线 PDF 解锁工具绕过**：PDF 规范层面的固有问题，不是 qpdf 缺陷。这层加密主要挡"无心 / 顺手"的编辑，不是高强度对抗。
+- **历史 v1.0.5 加章过的 PDF 仍可编辑**：升级后需重新跑一遍 v1.0.6 才能加密。
+
+---
+
+## 九、开发者
 
 深圳市无穹创新科技有限公司  
 © 2026 All Rights Reserved
