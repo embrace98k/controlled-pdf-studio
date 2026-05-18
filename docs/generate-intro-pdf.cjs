@@ -585,12 +585,18 @@ function drawSection2(ctx) {
   const s = new PageState(ctx.pdfDoc, ctx.font, ctx.fontEN, ctx.fontENBold);
   s.chapter('02', '核心功能', 'Core Features');
 
+  s.callout('tip', 'v1.0.6 重大升级',
+    '本版引入 AES-256 加密 + 权限锁定 + 【受控】文件名后缀 + SHA256 防伪短码，从源头封住 WPS / Acrobat / Foxit 等编辑器对受控 PDF 的删章和改字操作。');
+
   const modules = [
-    { icon: '📄', name: '单文件模式', desc: '拖拽印章·实时预览·自动适应窗口·Ctrl+滚轮缩放·印章信息不完整时按钮锁定' },
-    { icon: '📁', name: '批量模式',   desc: '选目录或多选文件·自动跳过已加章·按各自图幅自适应位置·支持仅首页·处理后生成日志' },
-    { icon: '⭐', name: '模板系统',   desc: '保存常用印章样式·JSON 导出/导入·便于多台机器或团队成员共享' },
-    { icon: '🎯', name: '智能透明度', desc: '盖章前渲染目标区域统计非白像素，盖在空白处用实色 0.95，覆盖文字自动半透明 0.6' },
-    { icon: '🖱', name: '右键集成',   desc: '设置页一键安装到 HKEY_CURRENT_USER，右键 PDF "用受控PDF工具打开"，不需要管理员' },
+    { icon: '🔒', name: 'AES-256 加密',  desc: '输出 PDF 用 qpdf 做 PDF 2.0 (R=6) AES-256 加密 + 权限锁定，WPS/Acrobat 直接禁止编辑、注释、抽页、文字抽取' },
+    { icon: '🪪', name: '【受控】后缀',  desc: '输出文件名自动追加【受控】(如 M.M.1.0033【受控】.pdf)，肉眼一秒识别受控文件' },
+    { icon: '🛡', name: 'SHA256 + 只读', desc: '计算输出文件 SHA256 前 8 位作为审计码显示在 UI；输出文件 attrib +R 设为系统只读，避免无意覆写' },
+    { icon: '📄', name: '单文件模式',    desc: '拖拽印章·实时预览·自动适应窗口·Ctrl+滚轮缩放·印章信息不完整时按钮锁定' },
+    { icon: '📁', name: '批量模式',      desc: '选目录或多选文件·自动跳过已加章·按各自图幅自适应位置·支持仅首页·处理后生成日志' },
+    { icon: '⭐', name: '模板系统',      desc: '保存常用印章样式·JSON 导出/导入·便于多台机器或团队成员共享' },
+    { icon: '🎯', name: '智能透明度',    desc: '盖章前渲染目标区域统计非白像素，盖在空白处用实色 0.95，覆盖文字自动半透明 0.6' },
+    { icon: '🖱', name: '右键集成',      desc: '设置页一键安装到 HKEY_CURRENT_USER，右键 PDF "用受控PDF工具打开"，不需要管理员' },
   ];
   for (const m of modules) {
     s.ensure(60);
@@ -693,8 +699,16 @@ function drawSection4_5(ctx) {
       a: '通常是 PDF 内部结构非标准（如 Word/旧版工具导出）。建议先用 Acrobat 打开另存为标准 PDF 再处理。'
     },
     {
-      q: '输出 PDF 能编辑/复制吗？',
-      a: '矢量印章写入 PDF 内容流深层，Acrobat 编辑工具难直接选中删除。内部使用场景下足够防误操作。'
+      q: '输出 PDF 能编辑 / 删章 / 复制吗？',
+      a: 'v1.0.6 起，输出 PDF 用 AES-256 加密 + 权限锁定。WPS / Adobe Acrobat / Foxit 等编辑器无法删章、改字、加注释、拆页、抽取文字。仅允许打印浏览。这是本版的核心防篡改机制。'
+    },
+    {
+      q: '加密的 owner 密码是什么？',
+      a: '密码归口管理员持有，普通用户无需知道。需要解锁修改时联系受控库管理员。密码不在公开文档 / 邮件 / Wiki 中暴露。'
+    },
+    {
+      q: '历史用 v1.0.5 加章过的 PDF 还可编辑，怎么办？',
+      a: '把它们当普通 PDF 重新拖入工具盖章一遍即可，新版会先剥离 _stamped 等旧后缀，再加 【受控】 + 加密。重要件建议批量重跑。'
     },
     {
       q: '多台机器共享模板？',
@@ -734,6 +748,7 @@ function drawSection6(ctx) {
     { layer: '渲染进程',   tech: 'React 19 + TypeScript + Vite 8', desc: '现代前端开发体验，HMR 热更新' },
     { layer: 'PDF 写入',   tech: 'pdf-lib + @pdf-lib/fontkit',   desc: '纯 JS 操作 PDF，矢量印章 + 字体子集化' },
     { layer: 'PDF 渲染',   tech: 'pdf.js (Mozilla, legacy)',     desc: '浏览器端 PDF 显示 + 内容检测' },
+    { layer: 'PDF 加密',   tech: 'qpdf 11.10 (Apache 2.0)',      desc: 'AES-256 (R=6) 加密 + 权限锁定，单文件 11 MB，随安装包分发' },
     { layer: '中文字体',   tech: 'SimHei (思源黑体)',            desc: '系统自带 + 子集化嵌入，输出 PDF 跨设备无差异' },
     { layer: '打包',       tech: 'electron-builder + NSIS',      desc: 'portable + 标准安装包两种格式' },
   ];
