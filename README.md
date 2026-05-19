@@ -2,7 +2,7 @@
 
 > 给机械零件受控库 PDF 一键加盖电子受控印章的 Windows 桌面工具。
 
-![version](https://img.shields.io/badge/version-1.0.6-blue) ![platform](https://img.shields.io/badge/platform-Windows-blue) ![electron](https://img.shields.io/badge/electron-42-9feaf9) ![react](https://img.shields.io/badge/react-19-61dafb) ![encrypted](https://img.shields.io/badge/AES--256-encrypted-success)
+![version](https://img.shields.io/badge/version-1.0.7-blue) ![platform](https://img.shields.io/badge/platform-Windows-blue) ![electron](https://img.shields.io/badge/electron-42-9feaf9) ![react](https://img.shields.io/badge/react-19-61dafb) ![encrypted](https://img.shields.io/badge/AES--256-encrypted-success)
 
 ---
 
@@ -71,8 +71,8 @@ npm run dist:portable
 ```
 
 输出位置：`release/`
-- `受控PDF盖章工具-v1.0.6-便携版.exe` — 单文件免安装
-- `受控PDF盖章工具-v1.0.6-安装版.exe` — NSIS 标准安装（推荐）
+- `受控PDF盖章工具-v1.0.7-便携版.exe` — 单文件免安装
+- `受控PDF盖章工具-v1.0.7-安装版.exe` — NSIS 标准安装（推荐）
 
 ---
 
@@ -110,8 +110,8 @@ gui-web/
 │   └── pdfjs/            pdf.js 字符映射表 + 标准字体
 ├── docs/
 │   ├── generate-intro-pdf.cjs           用户手册 PDF 生成脚本
-│   ├── release-notes-v1.0.6.md          GitHub Release 描述
-│   └── 受控PDF盖章工具-使用说明-v1.0.6.pdf  用户使用手册（9 页）
+│   ├── release-notes-v1.0.7.md          GitHub Release 描述
+│   └── 受控PDF盖章工具-使用说明-v1.0.7.pdf  用户使用手册（9 页）
 ├── CHANGELOG.md          版本历史
 ├── LICENSE
 └── README.md             本文件
@@ -152,7 +152,7 @@ gui-web/
 
 ---
 
-## 七、安全设计（v1.0.6 起）
+## 七、安全设计（v1.0.7 起）
 
 ### 加密链路
 
@@ -195,7 +195,7 @@ gui-web/
 - **NSIS 安装版首次启动需点"更多信息 → 仍要运行"**：未购买代码签名证书，Windows SmartScreen 默认拦截。内部使用场景下没问题。
 - **portable .exe 不建议安装右键菜单**：每次解压临时路径都变，注册表里的右键菜单条目会失效。建议右键菜单只在 NSIS 安装版中使用。
 - **加密 owner 密码可被在线 PDF 解锁工具绕过**：PDF 规范层面的固有问题，不是 qpdf 缺陷。这层加密主要挡"无心 / 顺手"的编辑，不是高强度对抗。
-- **历史 v1.0.5 加章过的 PDF 仍可编辑**：升级后需重新跑一遍 v1.0.6 才能加密。
+- **历史 v1.0.5 加章过的 PDF 仍可编辑**：升级后需重新跑一遍 v1.0.7 才能加密。
 
 ---
 

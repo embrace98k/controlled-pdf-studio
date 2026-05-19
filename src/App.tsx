@@ -153,15 +153,25 @@ export default function App() {
         `正在生成 PDF ... 非白 ${(det.ratio * 100).toFixed(1)}% → 透明度 ${det.hasContent ? '0.6' : '0.95'}`
       );
 
-      // 输出文件名保持源文件名不变；主进程会在末尾追加 【受控】 后缀
-      const outName = store.state.pdfFileName || 'output.pdf';
+      // 默认保存到源 PDF 同目录；文件名预填 【受控】 后缀；用户可改路径/名字
+      const baseName = (store.state.pdfFileName || 'output.pdf').replace(/\.pdf$/i, '');
+      const cleanBase = baseName
+        .replace(/\s*【受控】\s*(?:\(\d+\))?\s*$/, '')           // 已带【受控】的剥掉再加
+        .replace(/_stamped\s*$/i, '')                            // 老版 _stamped
+        .replace(/\s*\[[0-9a-f]{8}\](?:\s*\(\d+\))?\s*$/i, '')   // 老版 [8hex]
+        .trim();
+      const suggestedName = `${cleanBase}【受控】.pdf`;
 
       if (isElectron && store.state.pdfSourcePath) {
-        // ★ Electron 模式：直接通过主进程把文件写到源目录的 _stamped/
         const srcPath = store.state.pdfSourcePath;
         const srcDir = srcPath.replace(/[\\/][^\\/]+$/, '');
-        const outDir = `${srcDir}\\_stamped`;
-        const outPath = `${outDir}\\${outName}`;
+        // 弹保存对话框（默认路径 = 源目录 + 建议名）
+        const defaultPath = `${srcDir}\\${suggestedName}`;
+        const outPath = await window.api!.saveFileDialog(defaultPath, 'pdf');
+        if (!outPath) {
+          setStatus('已取消');
+          return;
+        }
         const result = await window.api!.stampPdfFile(
           srcPath,
           outPath,
@@ -186,10 +196,10 @@ export default function App() {
           setStatus(`✗ 失败：${result.error}`);
         }
       } else {
-        // 浏览器模式 fallback：用 pdf-lib 直接生成 + 下载
+        // 浏览器模式 fallback：用 pdf-lib 直接生成 + 下载（无 Electron 时）
         const bytes = await stampPdf({ ...store.state, stamp: effectiveStamp });
-        downloadBlob(bytes, outName);
-        setStatus(`✓ 已下载：${outName} · ${(bytes.length / 1024).toFixed(1)} KB`);
+        downloadBlob(bytes, suggestedName);
+        setStatus(`✓ 已下载：${suggestedName} · ${(bytes.length / 1024).toFixed(1)} KB`);
       }
     } catch (e: any) {
       setStatus(`✗ 失败：${e.message}`);
@@ -283,7 +293,7 @@ export default function App() {
     >
       <header style={headerStyle}>
         <div style={{ fontWeight: 700, fontSize: 14 }}>
-          📄 受控PDF盖章工具 {isElectron ? '· 桌面版 v1.0.6' : '· Web 版 v1.0.6'}
+          📄 受控PDF盖章工具 {isElectron ? '· 桌面版 v1.0.7' : '· Web 版 v1.0.7'}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           {mode === 'single' && (
@@ -402,7 +412,7 @@ export default function App() {
 
       <footer style={footerStyle}>
         <span>{status}</span>
-        <span style={{ color: '#666' }}>v1.0.6 {isElectron ? '桌面版' : 'Web 版'}</span>
+        <span style={{ color: '#666' }}>v1.0.7 {isElectron ? '桌面版' : 'Web 版'}</span>
       </footer>
 
       {tplModalOpen && (
@@ -543,7 +553,7 @@ function SettingsView({ isElectron }: { isElectron: boolean }) {
       </div>
 
       <div style={{ marginTop: 20, fontSize: 11, color: '#999' }}>
-        受控PDF盖章工具 v1.0.6 · Electron 桌面版 · © 2026 深圳市无穹创新科技有限公司
+        受控PDF盖章工具 v1.0.7 · Electron 桌面版 · © 2026 深圳市无穹创新科技有限公司
       </div>
     </div>
   );

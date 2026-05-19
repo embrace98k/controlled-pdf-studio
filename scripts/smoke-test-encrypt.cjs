@@ -53,10 +53,10 @@ async function makeTestPdf() {
   page.drawText('Hello Controlled CAD', {
     x: 50, y: 750, size: 24, font, color: rgb(0.1, 0.1, 0.1),
   });
-  page.drawText('Smoke test for v1.0.6 encryption.', {
+  page.drawText('Smoke test for v1.0.7 encryption.', {
     x: 50, y: 700, size: 12, font, color: rgb(0.3, 0.3, 0.3),
   });
-  doc.setProducer('Controlled-PDF-Studio v1.0.6');
+  doc.setProducer('Controlled-PDF-Studio v1.0.7');
   doc.setKeywords(['controlled-stamped', 'part:TEST.001', 'rev:01']);
   return await doc.save();
 }

@@ -1,7 +1,7 @@
 {
   "name": "controlled-pdf-studio",
   "private": true,
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "受控PDF盖章工具 - 给机械零件受控库 PDF 加受控印章 + 防篡改加密",
   "author": "深圳市无穹创新科技有限公司",
   "main": "dist-electron/main.cjs",

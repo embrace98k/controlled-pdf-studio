@@ -7,6 +7,10 @@ const path = require('node:path');
 const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
 const fontkit = require('@pdf-lib/fontkit');
 
+// 从 package.json 取版本号，避免手动同步
+const PKG = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
+const VERSION = `v${PKG.version}`;
+
 // ============ 页面规格 ============
 const W = 595.28;
 const H = 841.89;
@@ -77,7 +81,7 @@ const FONT_SIZE = {
     drawFooter(pages[i], FONT, FONT_EN, i + 1, pages.length);
   }
 
-  const outPath = path.join(__dirname, '受控PDF盖章工具-使用说明-v1.0.6.pdf');
+  const outPath = path.join(__dirname, `受控PDF盖章工具-使用说明-${VERSION}.pdf`);
   const bytes = await pdfDoc.save({ useObjectStreams: true });
   fs.writeFileSync(outPath, bytes);
   console.log('✓', outPath);
@@ -113,7 +117,7 @@ function drawFooter(page, font, fontEN, pageNum, total) {
   page.drawText('受控PDF盖章工具', {
     x: PADDING + 38, y: H - 25, size: 8, font, color: COLOR.muted,
   });
-  page.drawText('v1.0.6  ·  使用说明', {
+  page.drawText(`${VERSION}  ·  使用说明`, {
     x: PADDING + 38 + font.widthOfTextAtSize('受控PDF盖章工具', 8) + 8,
     y: H - 25, size: 8, font, color: COLOR.hint,
   });
@@ -189,7 +193,7 @@ function drawCoverPage({ pdfDoc, font, fontEN, fontENBold }) {
   });
 
   // 版本信息
-  page.drawText('v1.0.6', {
+  page.drawText(VERSION, {
     x: PADDING, y: H - 250, size: 14, font: fontENBold, color: rgb(1, 1, 1),
   });
   page.drawText('Windows · 桌面应用', {
@@ -585,7 +589,7 @@ function drawSection2(ctx) {
   const s = new PageState(ctx.pdfDoc, ctx.font, ctx.fontEN, ctx.fontENBold);
   s.chapter('02', '核心功能', 'Core Features');
 
-  s.callout('tip', 'v1.0.6 重大升级',
+  s.callout('tip', 'v1.0.6 起 · 防篡改加密',
     '本版引入 AES-256 加密 + 权限锁定 + 【受控】文件名后缀 + SHA256 防伪短码，从源头封住 WPS / Acrobat / Foxit 等编辑器对受控 PDF 的删章和改字操作。');
 
   const modules = [
@@ -700,7 +704,7 @@ function drawSection4_5(ctx) {
     },
     {
       q: '输出 PDF 能编辑 / 删章 / 复制吗？',
-      a: 'v1.0.6 起，输出 PDF 用 AES-256 加密 + 权限锁定。WPS / Adobe Acrobat / Foxit 等编辑器无法删章、改字、加注释、拆页、抽取文字。仅允许打印浏览。这是本版的核心防篡改机制。'
+      a: 'v1.0.6 起，输出 PDF 用 AES-256 加密 + 权限锁定。WPS / Adobe Acrobat / Foxit 等编辑器无法删章、改字、加注释、拆页、抽取文字。仅允许打印浏览。这是本工具的核心防篡改机制。'
     },
     {
       q: '加密的 owner 密码是什么？',
@@ -791,7 +795,7 @@ function drawSection6(ctx) {
   s.page.drawText('Shenzhen Wuqiong Innovation Technology Co., Ltd.', {
     x: PADDING + 20, y: s.y - 40, size: 8, font: s.fontEN, color: rgb(0.7, 0.72, 0.78),
   });
-  s.page.drawText('v1.0.6', {
+  s.page.drawText(VERSION, {
     x: W - PADDING - 60, y: s.y - 28, size: 18, font: s.fontENBold, color: COLOR.accent,
   });
 }

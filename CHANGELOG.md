@@ -4,6 +4,19 @@
 
 ---
 
+## [1.0.7] - 2026-05-19
+
+### 变更 Changed
+- **单文件导出改为手动选位置**：点"应用并导出"会弹 Windows 标准"保存为"对话框，不再强制写到 `<源目录>\_stamped\` 子文件夹。
+- 保存对话框**默认位置 = 源 PDF 同目录**，**默认文件名 = `<原名>【受控】.pdf`**，用户可自由改路径和名字。
+- 取消保存对话框 → 状态栏显示"已取消"，不报错。
+
+### 修复 Fixed
+- `buildFinalPath` 在用户选择已带 `【受控】` 的路径时会误判"文件名冲突"，输出变成 `xxx【受控】 (1).pdf`。
+  现在跳过对 `originalOutput` 自身的碰撞检测，结果一致正确。
+
+---
+
 ## [1.0.6] - 2026-05-18
 
 ### 新增 Added
@@ -53,6 +66,7 @@
 
 ---
 
+[1.0.7]: https://github.com/embrace98k/controlled-pdf-studio/releases/tag/v1.0.7
 [1.0.6]: https://github.com/embrace98k/controlled-pdf-studio/releases/tag/v1.0.6
 [1.0.5]: https://github.com/embrace98k/controlled-pdf-studio/releases/tag/v1.0.5
 [1.0.0]: https://github.com/embrace98k/controlled-pdf-studio/releases/tag/v1.0.0

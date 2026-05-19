@@ -1,0 +1,46 @@
+---
+description: 每次代码改动后自动升 patch 版本号（项目约定）
+alwaysApply: true
+---
+
+# 自动升 patch 版本号
+
+任何会影响最终用户行为的代码改动后，**必须**把版本号从 `x.y.z` 升到 `x.y.(z+1)`，不要等用户提醒。
+
+## 升级范围
+
+- 只升 patch（最后一位），例如 `1.0.7` → `1.0.8`。
+- 主版本 / 次版本号由用户显式决定。
+
+## 需要同步修改的位置
+
+| 文件 | 位置 |
+|---|---|
+| `package.json` | `"version": "x.y.z"` |
+| `electron/handlers/pdf.ts` | `STAMP_PRODUCER` 常量 + 顶部注释 |
+| `scripts/smoke-test-encrypt.cjs` | `doc.setProducer(...)` 和测试文字 |
+| `README.md` | 顶部 badge `version-x.y.z` |
+| `src/App.tsx` | 标题栏 / 设置页 / 页脚 等所有显示版本号处 |
+| `CHANGELOG.md` | 顶部加一节 `## [x.y.z] - YYYY-MM-DD`，记录变更/修复 |
+
+`docs/generate-intro-pdf.cjs` 不需要手动改 —— 它会从 `package.json` 自动读取版本号。但**改完版本后要重跑一次** `node docs/generate-intro-pdf.cjs` 以更新 PDF 文件名 + 内文版本号，并删除旧版 PDF（git 历史已保留）。
+
+## 不算"代码改动"的情况
+
+- 仅修注释 / typo
+- 仅修 README / CHANGELOG 等纯文档
+- 仅调 `.gitignore` / `package-lock.json` 的依赖版本同步
+
+这些不升版本号。
+
+## 工作流
+
+```text
+1. 改代码
+2. 升版本号（所有上述位置）
+3. CHANGELOG 加新条目
+4. node docs/generate-intro-pdf.cjs 重生成手册 PDF（如新版功能要写进手册）
+5. 删旧版 PDF
+6. （需要时）npm run dist 重新打包
+7. 提交并推送
+```

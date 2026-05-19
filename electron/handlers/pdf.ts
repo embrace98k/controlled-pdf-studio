@@ -1,7 +1,7 @@
 /**
  * PDF 处理 IPC handlers - 主进程版
  *
- * 处理流程（防篡改强化版 v1.0.6）：
+ * 处理流程（防篡改强化版 v1.0.7）：
  *   1) pdf-lib 在内存里把章绘制进 PDF 内容流
  *   2) 写到临时文件
  *   3) 用 qpdf 对临时文件做"加密 + 权限锁定"
@@ -34,7 +34,7 @@ const OWNER_PASSWORD = 'skyland-ADMIN1';
 const STAMPED_SUFFIX = '【受控】';
 
 // 标识"已加章"的元数据 marker
-const STAMP_PRODUCER = 'Controlled-PDF-Studio v1.0.6';
+const STAMP_PRODUCER = 'Controlled-PDF-Studio v1.0.7';
 const STAMP_MARKER_PREFIX = 'Controlled-PDF-Studio';
 
 // Windows 自带中文字体（开发机）；打包时会复制到 resources/
@@ -137,19 +137,21 @@ function sha256Short(filePath: string): string {
 
 // 文件名 foo.pdf → foo【受控】.pdf；处理重名时追加 (1) (2)
 // 如果原文件名已经带 【受控】 / [8hex] / _stamped 等冗余后缀，先剥离
+// 注意：本函数只是计算"理想最终名"，碰撞检测会跳过 originalOutput 本身，
+//      因为 originalOutput 是 qpdf 刚写出的临时文件，下游会 rename 到 final
 function buildFinalPath(originalOutput: string): string {
   const dir = path.dirname(originalOutput);
   const baseExt = path.extname(originalOutput);
   let base = path.basename(originalOutput, baseExt);
-  // 剥离历史遗留后缀，避免出现 "foo_stamped [a1b2c3d4]【受控】.pdf"
   base = base
     .replace(/\s*\[[0-9a-f]{8}\](?:\s*\(\d+\))?\s*$/i, '')   // [8hex] 或 [8hex] (1)
     .replace(/_stamped\s*$/i, '')                             // 旧版 _stamped 后缀
-    .replace(/【受控】\s*$/i, '')                              // 去掉再重新加（防 stack）
+    .replace(/【受控】\s*(?:\(\d+\))?\s*$/, '')                // 去掉再重新加（防堆叠）
     .trim();
+  const originalLower = path.resolve(originalOutput).toLowerCase();
   let candidate = path.join(dir, `${base}${STAMPED_SUFFIX}${baseExt}`);
   let n = 1;
-  while (fs.existsSync(candidate)) {
+  while (fs.existsSync(candidate) && path.resolve(candidate).toLowerCase() !== originalLower) {
     candidate = path.join(dir, `${base}${STAMPED_SUFFIX} (${n})${baseExt}`);
     n++;
   }
