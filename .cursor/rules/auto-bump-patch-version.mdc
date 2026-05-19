@@ -41,6 +41,10 @@ alwaysApply: true
 3. CHANGELOG 加新条目
 4. node docs/generate-intro-pdf.cjs 重生成手册 PDF（如新版功能要写进手册）
 5. 删旧版 PDF
-6. （需要时）npm run dist 重新打包
-7. 提交并推送
+6. 写一份 docs/release-notes-vX.Y.Z.md，
+   格式参考 docs/release-notes-v1.0.6.md
+   （用户后续手动在 GitHub Release 页面粘贴用）
+7. （需要时）npm run dist 重新打包
+8. 提交并推送 main + tag vX.Y.Z
+   （.exe 安装包不进 git，由用户在 GitHub Release 页面手动上传）
 ```
